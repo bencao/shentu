@@ -18,7 +18,7 @@ func EndBlocker(ctx sdk.Context, k Keeper, stakingKeeper types.StakingKeeper) {
 	pools := k.GetAllPools(ctx)
 	for _, pool := range pools {
 		if k.PoolEnded(ctx, pool) || (pool.Premium.Native.Empty() && pool.Premium.Foreign.Empty()) {
-			k.ClosePool(ctx, pool)
+			k.ClosePool(ctx, pool.PoolID)
 			continue
 		}
 		// compute premiums for current block
@@ -47,7 +47,7 @@ func EndBlocker(ctx sdk.Context, k Keeper, stakingKeeper types.StakingKeeper) {
 		// distribute to A and C in proportion
 		bondDenom := stakingKeeper.BondDenom(ctx) // common.MicroCTKDenom
 		totalCollateralAmount := pool.TotalCollateral.AmountOf(bondDenom)
-		recipients := k.GetAllPoolCollaterals(ctx, pool)
+		recipients := k.GetAllPoolCollaterals(ctx, pool.PoolID)
 		for _, recipient := range recipients {
 			stakeProportion := sdk.NewDecFromInt(recipient.Amount.AmountOf(bondDenom)).QuoInt(totalCollateralAmount)
 			nativePremium := currentBlockPremium.Native.MulDecTruncate(stakeProportion)

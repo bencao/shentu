@@ -16,12 +16,12 @@ func (k Keeper) SetPool(ctx sdk.Context, pool types.Pool) {
 func (k Keeper) GetPool(ctx sdk.Context, id uint64) (types.Pool, error) {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.GetPoolKey(id))
-	if bz != nil {
-		var pool types.Pool
-		k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &pool)
-		return pool, nil
+	if bz == nil {
+		return types.Pool{}, types.ErrNoPoolFound
 	}
-	return types.Pool{}, types.ErrNoPoolFound
+	var pool types.Pool
+	k.cdc.MustUnmarshalBinaryLengthPrefixed(bz, &pool)
+	return pool, nil
 }
 
 func (k Keeper) CreatePool(
@@ -70,7 +70,7 @@ func (k Keeper) CreatePool(
 	k.SetPool(ctx, pool)
 	k.SetNextPoolID(ctx, id+1)
 	k.SetProvider(ctx, admin, provider)
-	k.SetCollateral(ctx, pool, admin, types.NewCollateral(pool, admin, shield))
+	k.SetCollateral(ctx, pool.PoolID, admin, types.NewCollateral(pool.PoolID, admin, shield))
 
 	return pool, nil
 }
@@ -121,7 +121,7 @@ func (k Keeper) UpdatePool(
 	pool.TotalCollateral = pool.TotalCollateral.Add(shield...)
 	poolCertiKCollateral := k.GetPoolCertiKCollateral(ctx, pool)
 	poolCertiKCollateral.Amount = poolCertiKCollateral.Amount.Add(shield...)
-	k.SetCollateral(ctx, pool, k.GetAdmin(ctx), poolCertiKCollateral)
+	k.SetCollateral(ctx, pool.PoolID, k.GetAdmin(ctx), poolCertiKCollateral)
 
 	pool.Shield = pool.Shield.Add(shield...)
 	pool.Premium = pool.Premium.Add(types.MixedDecCoinsFromMixedCoins(deposit))
@@ -188,11 +188,11 @@ func (k Keeper) PoolEnded(ctx sdk.Context, pool types.Pool) bool {
 }
 
 // ClosePool closes the pool
-func (k Keeper) ClosePool(ctx sdk.Context, pool types.Pool) {
+func (k Keeper) ClosePool(ctx sdk.Context, poolID uint64) {
 	// TODO: make sure nothing else needs to be done
-	k.FreeCollaterals(ctx, pool)
+	k.FreeCollaterals(ctx, poolID)
 	store := ctx.KVStore(k.storeKey)
-	store.Delete(types.GetPoolKey(pool.PoolID))
+	store.Delete(types.GetPoolKey(poolID))
 }
 
 // IterateAllPools iterates over the all the stored pools and performs a callback function.
@@ -220,16 +220,16 @@ func (k Keeper) ValidatePoolDuration(ctx sdk.Context, timeDuration, numBlocks in
 
 // WithdrawFromPools withdraws coins from all pools to match total collateral to be less than or equal to total delegation.
 func (k Keeper) WithdrawFromPools(ctx sdk.Context, addr sdk.AccAddress, amount sdk.Coins) {
+	bondDenom := k.sk.BondDenom(ctx)
 	provider, _ := k.GetProvider(ctx, addr)
-	withdrawAmtDec := sdk.NewDecFromInt(amount.AmountOf(k.sk.BondDenom(ctx)))
-	collateralDec := sdk.NewDecFromInt(provider.Collateral.AmountOf(k.sk.BondDenom(ctx)))
+	withdrawAmtDec := sdk.NewDecFromInt(amount.AmountOf(bondDenom))
+	collateralDec := sdk.NewDecFromInt(provider.Collateral.AmountOf(bondDenom))
 	proportion := withdrawAmtDec.Quo(collateralDec)
 	if amount.IsAnyGT(provider.Collateral) {
 		panic(types.ErrNotEnoughCollateral)
 	}
 
 	addrCollaterals := k.GetOnesCollaterals(ctx, addr)
-	bondDenom := k.sk.BondDenom(ctx)
 	remainingWithdraw := amount
 	for i, collateral := range addrCollaterals {
 		var withdrawAmtDec sdk.Dec

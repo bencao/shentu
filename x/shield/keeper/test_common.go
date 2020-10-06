@@ -28,7 +28,7 @@ func PrintCollateralInfo(k Keeper, ctx sdk.Context, poolID uint64, addr sdk.AccA
 		fmt.Printf("%s error: pool is not found\n", description)
 		return
 	}
-	collateral, found := k.GetCollateral(ctx, pool, addr)
+	collateral, found := k.GetCollateral(ctx, poolID, addr)
 	if found {
 		fmt.Printf("%s: collateral of %s, pool ID %d, collateral %s\n", description, addr, pool.PoolID, collateral.Amount)
 	} else {
@@ -87,11 +87,8 @@ func RandomCollateral(r *rand.Rand, k Keeper, ctx sdk.Context) (types.Collateral
 	if !found {
 		return types.Collateral{}, false
 	}
-	pool, err := k.GetPool(ctx, poolID)
-	if err != nil {
-		return types.Collateral{}, false
-	}
-	collaterals := k.GetAllPoolCollaterals(ctx, pool)
+
+	collaterals := k.GetAllPoolCollaterals(ctx, poolID)
 	if len(collaterals) == 0 {
 		return types.Collateral{}, false
 	}

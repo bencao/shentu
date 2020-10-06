@@ -17,12 +17,13 @@ type GenesisState struct {
 	Collaterals         []Collateral        `json:"collaterals" yaml:"collaterals"`
 	Providers           []Provider          `json:"providers" yaml:"providers"`
 	Purchases           []Purchase          `json:"purchases" yaml:"purchases"`
+	PendingPayouts      PendingPayouts      `json:"pending_payouts" yaml:"pending_payouts"`
 }
 
 // NewGenesisState creates a new genesis state.
 func NewGenesisState(
 	shieldAdmin sdk.AccAddress, nextPoolID uint64, poolParams PoolParams, claimProposalParams ClaimProposalParams,
-	pools []Pool, collaterals []Collateral, providers []Provider, purchase []Purchase) GenesisState {
+	pools []Pool, collaterals []Collateral, providers []Provider, purchase []Purchase, payouts PendingPayouts) GenesisState {
 	return GenesisState{
 		ShieldAdmin:         shieldAdmin,
 		NextPoolID:          nextPoolID,
@@ -32,6 +33,7 @@ func NewGenesisState(
 		Collaterals:         collaterals,
 		Providers:           providers,
 		Purchases:           purchase,
+		PendingPayouts:      payouts,
 	}
 }
 

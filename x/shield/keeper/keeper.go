@@ -129,7 +129,7 @@ func (k Keeper) DequeueCompletedWithdrawalQueue(ctx sdk.Context) {
 			continue
 		}
 		pool.TotalCollateral = pool.TotalCollateral.Sub(withdrawal.Amount)
-		collateral, found := k.GetCollateral(ctx, pool, withdrawal.Address)
+		collateral, found := k.GetCollateral(ctx, pool.PoolID, withdrawal.Address)
 		if !found {
 			panic("withdrawal collateral not found!")
 		}
@@ -138,7 +138,7 @@ func (k Keeper) DequeueCompletedWithdrawalQueue(ctx sdk.Context) {
 		if collateral.Amount.IsZero() {
 			store.Delete(types.GetCollateralKey(pool.PoolID, collateral.Provider))
 		} else {
-			k.SetCollateral(ctx, pool, collateral.Provider, collateral)
+			k.SetCollateral(ctx, pool.PoolID, collateral.Provider, collateral)
 		}
 		k.SetPool(ctx, pool)
 

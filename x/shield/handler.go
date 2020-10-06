@@ -236,7 +236,7 @@ func handleMsgWithdrawForeignRewards(ctx sdk.Context, msg types.MsgWithdrawForei
 	if amount.Equal(sdk.ZeroDec()) {
 		return &sdk.Result{Events: ctx.EventManager().Events()}, types.ErrNoRewards
 	}
-	newPayout := types.NewPendingPayouts(amount, msg.ToAddr)
+	newPayout := types.NewPendingPayouts(msg.Denom, msg.ToAddr, amount)
 	rewards.Foreign = rewards.Foreign.Sub(
 		sdk.DecCoins{sdk.NewDecCoinFromDec(msg.Denom, amount)})
 	k.SetRewards(ctx, msg.From, rewards)

@@ -44,23 +44,25 @@ type Collateral struct {
 	LockedCollaterals []LockedCollateral
 }
 
-func NewCollateral(pool Pool, provider sdk.AccAddress, amount sdk.Coins) Collateral {
+func NewCollateral(poolID uint64, provider sdk.AccAddress, amount sdk.Coins) Collateral {
 	return Collateral{
-		PoolID:   pool.PoolID,
+		PoolID:   poolID,
 		Provider: provider,
 		Amount:   amount,
 	}
 }
 
 type PendingPayout struct {
+	Denom  string
 	Amount sdk.Dec
 	ToAddr string
 }
 
 type PendingPayouts []PendingPayout
 
-func NewPendingPayouts(amount sdk.Dec, to string) PendingPayout {
+func NewPendingPayouts(denom, to string, amount sdk.Dec) PendingPayout {
 	return PendingPayout{
+		Denom:  denom,
 		Amount: amount,
 		ToAddr: to,
 	}

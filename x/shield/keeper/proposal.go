@@ -35,13 +35,13 @@ func (k Keeper) ClaimLock(ctx sdk.Context, proposalID uint64, poolID uint64,
 	}
 
 	// update locked collaterals for community
-	collaterals := k.GetAllPoolCollaterals(ctx, pool)
+	collaterals := k.GetAllPoolCollaterals(ctx, pool.PoolID)
 	for _, collateral := range collaterals {
 		lockedCoins := GetLockedCoins(loss, pool.TotalCollateral, collateral.Amount)
 		lockedCollateral := types.NewLockedCollateral(proposalID, lockedCoins)
 		collateral.LockedCollaterals = append(collateral.LockedCollaterals, lockedCollateral)
 		collateral.Amount = collateral.Amount.Sub(lockedCoins)
-		k.SetCollateral(ctx, pool, collateral.Provider, collateral)
+		k.SetCollateral(ctx, pool.PoolID, collateral.Provider, collateral)
 		k.LockProvider(ctx, collateral.Provider, lockedCoins, lockPeriod)
 	}
 
@@ -168,7 +168,7 @@ func (k Keeper) ClaimUnlock(ctx sdk.Context, proposalID uint64, poolID uint64, l
 	k.SetPool(ctx, pool)
 
 	// update collaterals and providers
-	collaterals := k.GetAllPoolCollaterals(ctx, pool)
+	collaterals := k.GetAllPoolCollaterals(ctx, poolID)
 	for _, collateral := range collaterals {
 		for j := range collateral.LockedCollaterals {
 			if collateral.LockedCollaterals[j].ProposalID == proposalID {
@@ -184,7 +184,7 @@ func (k Keeper) ClaimUnlock(ctx sdk.Context, proposalID uint64, poolID uint64, l
 				break
 			}
 		}
-		k.SetCollateral(ctx, pool, collateral.Provider, collateral)
+		k.SetCollateral(ctx, pool.PoolID, collateral.Provider, collateral)
 	}
 
 	return nil
@@ -331,18 +331,13 @@ func (k Keeper) DeleteReimbursement(ctx sdk.Context, proposalID uint64) error {
 func (k Keeper) CreateReimbursement(
 	ctx sdk.Context, proposalID uint64, poolID uint64, amount sdk.Coins, beneficiary sdk.AccAddress,
 ) error {
-	pool, err := k.GetPool(ctx, poolID)
-	if err != nil {
-		return err
-	}
-
 	// for each community member, get coins from delegations
-	collaterals := k.GetAllPoolCollaterals(ctx, pool)
+	collaterals := k.GetAllPoolCollaterals(ctx, poolID)
 	for _, collateral := range collaterals {
 		for j := range collateral.LockedCollaterals {
 			if collateral.LockedCollaterals[j].ProposalID == proposalID {
 				collateral.LockedCollaterals = append(collateral.LockedCollaterals[:j], collateral.LockedCollaterals[j+1])
-				k.SetCollateral(ctx, pool, collateral.Provider, collateral)
+				k.SetCollateral(ctx, poolID, collateral.Provider, collateral)
 				if err := k.UndelegateCoinsToShieldModule(ctx, collateral.Provider, collateral.LockedCollaterals[j].LockedCoins); err != nil {
 					return err
 				}

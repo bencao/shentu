@@ -48,6 +48,7 @@ func (k Keeper) PurchaseShield(
 	}
 	poolParams := k.GetPoolParams(ctx)
 	claimParams := k.GetClaimProposalParams(ctx)
+	bondDenom := k.sk.BondDenom(ctx)
 
 	// check preconditions
 	if !pool.Active {
@@ -57,10 +58,10 @@ func (k Keeper) PurchaseShield(
 		pool.EndBlockHeight <= ctx.BlockHeight()+types.DefaultWithdrawalPeriod.Milliseconds()/1000/5 {
 		return types.Purchase{}, types.ErrPoolLifeTooShort
 	}
-	if shield.AmountOf(k.sk.BondDenom(ctx)).GT(pool.Available) {
+	if shield.AmountOf(bondDenom).GT(pool.Available) {
 		return types.Purchase{}, types.ErrNotEnoughShield
 	}
-  
+
 	// send tokens to shield module account
 	shieldDec := sdk.NewDecCoinsFromCoins(shield...)
 	premium, _ := shieldDec.MulDec(poolParams.ShieldFeesRate).TruncateDecimal()
@@ -72,7 +73,7 @@ func (k Keeper) PurchaseShield(
 	premiumMixedDec := types.NewMixedDecCoins(sdk.NewDecCoinsFromCoins(premium...), sdk.DecCoins{})
 	pool.Premium = pool.Premium.Add(premiumMixedDec)
 	pool.Shield = pool.Shield.Add(shield...)
-	pool.Available = pool.Available.Sub(shield.AmountOf(k.sk.BondDenom(ctx)))
+	pool.Available = pool.Available.Sub(shield.AmountOf(bondDenom))
 	k.SetPool(ctx, pool)
 
 	// set purchase
@@ -165,6 +166,31 @@ func (k Keeper) IteratePurchases(ctx sdk.Context, callback func(purchase types.P
 func (k Keeper) GetAllPurchases(ctx sdk.Context) (purchases []types.Purchase) {
 	k.IteratePurchases(ctx, func(purchase types.Purchase) bool {
 		purchases = append(purchases, purchase)
+		return false
+	})
+	return
+}
+
+// IteratePendingPayouts iterates through foreign coins pending payouts
+func (k Keeper) IteratePendingPayouts(ctx sdk.Context, callback func(pendingPayout types.PendingPayout) (stop bool)) {
+	store := ctx.KVStore(k.storeKey)
+	iterator := sdk.KVStorePrefixIterator(store, types.PendingPayoutsKey)
+
+	defer iterator.Close()
+	for ; iterator.Valid(); iterator.Next() {
+		var pendingPayout types.PendingPayout
+		k.cdc.MustUnmarshalBinaryLengthPrefixed(iterator.Value(), &pendingPayout)
+
+		if callback(pendingPayout) {
+			break
+		}
+	}
+}
+
+// GetAllPurchases retrieves all purchases.
+func (k Keeper) GetAllPendingPayouts(ctx sdk.Context) (pendingPayouts types.PendingPayouts) {
+	k.IteratePendingPayouts(ctx, func(pendingPayout types.PendingPayout) bool {
+		pendingPayouts = append(pendingPayouts, pendingPayout)
 		return false
 	})
 	return
