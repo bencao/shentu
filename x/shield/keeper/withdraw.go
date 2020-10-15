@@ -96,6 +96,8 @@ func (k Keeper) DequeueCompletedWithdrawQueue(ctx sdk.Context) {
 		pool, found := k.GetPool(ctx, withdraw.PoolID)
 		if !found {
 			// Pools, collaterals and providers have been updated for closed pools.
+			provider.Withdrawing = provider.Withdrawing.Sub(withdraw.Amount)
+			k.SetProvider(ctx, withdraw.Address, provider)
 			continue
 		}
 		collateral, found := k.GetCollateral(ctx, pool, withdraw.Address)
