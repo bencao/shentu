@@ -38,6 +38,9 @@ func (k Keeper) SetCollateral(ctx sdk.Context, pool types.Pool, addr sdk.AccAddr
 func (k Keeper) FreeCollaterals(ctx sdk.Context, pool types.Pool) {
 	store := ctx.KVStore(k.storeKey)
 	k.IteratePoolCollaterals(ctx, pool, func(collateral types.Collateral) bool {
+		if collateral.TotalLocked.IsPositive() {
+			panic("locked collateral in closed pool")
+		}
 		provider, _ := k.GetProvider(ctx, collateral.Provider)
 		provider.Collateral = provider.Collateral.Sub(collateral.Amount)
 		provider.Available = provider.Available.Add(collateral.Amount)
