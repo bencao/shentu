@@ -276,7 +276,7 @@ func initTestnet(cmd *cobra.Command, config *tmconfig.Config, cdc *codec.Codec,
 			return err
 		}
 
-		certikConfigFilePath := filepath.Join(nodeDir, "config/certikd.toml")
+		certikConfigFilePath := filepath.Join(nodeDir, "config/app.toml")
 		srvconfig.WriteConfigFile(certikConfigFilePath, certikConfig)
 
 		config.Moniker = nodeDirName
