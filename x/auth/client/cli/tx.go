@@ -34,13 +34,8 @@ func GetCmdUnlock(cdc *codec.Codec) *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			inBuf := bufio.NewReader(cmd.InOrStdin())
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
 			txBldr := authtxb.NewTxBuilderFromCLI(inBuf).WithTxEncoder(utils.GetTxEncoder(cdc))
-			accGetter := authtxb.NewAccountRetriever(cliCtx)
-
-			if _, err := accGetter.GetAccount(cliCtx.GetFromAddress()); err != nil {
-				return err
-			}
+			cliCtx := context.NewCLIContextWithInput(inBuf).WithCodec(cdc)
 
 			addr, err := sdk.AccAddressFromBech32(args[0])
 			if err != nil {
