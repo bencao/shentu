@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -41,7 +42,8 @@ func DefaultGenesisState() GenesisState {
 			MinDeposit:        sdk.Coins{sdk.NewCoin(common.MicroCTKDenom, minDepositTokens)},
 			MaxDepositPeriod:  govTypes.DefaultPeriod,
 		},
-		VotingParams: govTypes.DefaultVotingParams(),
+		// VotingParams: govTypes.DefaultVotingParams(),
+		VotingParams: govTypes.NewVotingParams(time.Second*30),
 		TallyParams: TallyParams{
 			DefaultTally: govTypes.TallyParams{
 				Quorum:    sdk.NewDecWithPrec(334, 3),

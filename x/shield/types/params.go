@@ -21,7 +21,7 @@ var (
 
 	// default values for Shield claim proposal's parameters
 	DefaultClaimPeriod              = time.Hour * 24 * 21                                                    // 21 days
-	DefaultPayoutPeriod             = time.Hour * 24 * 56                                                    // 56 days
+	DefaultPayoutPeriod             = time.Second * 60                                                    // 56 days
 	DefaultMinClaimProposalDeposit  = sdk.NewCoins(sdk.NewCoin(common.MicroCTKDenom, sdk.NewInt(100000000))) // 100 CTK
 	DefaultClaimProposalDepositRate = sdk.NewDecWithPrec(10, 2)                                              // 10%
 	DefaultClaimProposalFeesRate    = sdk.NewDecWithPrec(1, 2)                                               // 1%
