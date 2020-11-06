@@ -28,22 +28,24 @@ const (
 	OpWeightMsgWithdrawRewards    = "op_weight_msg_withdraw_rewards"
 
 	// P's operations
-	OpWeightMsgPurchaseShield   = "op_weight_msg_purchase_shield"
-	OpWeightShieldClaimProposal = "op_weight_msg_submit_claim_proposal"
-	OpWeightStakeForShield      = "op_weight_msg_stake_for_shield"
-	OpWeightUnstakeFromShield   = "op_weight_msg_unstake_from_shield"
+	OpWeightMsgPurchaseShield     = "op_weight_msg_purchase_shield"
+	OpWeightShieldClaimProposal   = "op_weight_msg_submit_claim_proposal"
+	OpWeightStakeForShield        = "op_weight_msg_stake_for_shield"
+	OpWeightUnstakeFromShield     = "op_weight_msg_unstake_from_shield"
+	OpWeightWithdrawReimbursement = "op_weight_msg_withdraw_reimbursement"
 )
 
 var (
-	DefaultWeightMsgCreatePool         = 10
-	DefaultWeightMsgUpdatePool         = 20
-	DefaultWeightMsgDepositCollateral  = 20
-	DefaultWeightMsgWithdrawCollateral = 20
-	DefaultWeightMsgWithdrawRewards    = 10
-	DefaultWeightMsgPurchaseShield     = 20
-	DefaultWeightMsgStakeForShield     = 20
-	DefaultWeightMsgUnstakeFromShield  = 15
-	DefaultWeightShieldClaimProposal   = 5
+	DefaultWeightMsgCreatePool            = 10
+	DefaultWeightMsgUpdatePool            = 20
+	DefaultWeightMsgDepositCollateral     = 20
+	DefaultWeightMsgWithdrawCollateral    = 20
+	DefaultWeightMsgWithdrawRewards       = 10
+	DefaultWeightMsgPurchaseShield        = 20
+	DefaultWeightMsgStakeForShield        = 20
+	DefaultWeightMsgUnstakeFromShield     = 15
+	DefaultWeightShieldClaimProposal      = 5
+	DefaultWeightMsgWithdrawReimbursement = 5
 
 	DefaultIntMax = 100000000000
 )
@@ -90,6 +92,11 @@ func WeightedOperations(appParams simulation.AppParams, cdc *codec.Codec, k keep
 		func(_ *rand.Rand) {
 			weightMsgUnstakeFromShield = DefaultWeightMsgUnstakeFromShield
 		})
+	var weightMsgWithdrawReimbursement int
+	appParams.GetOrGenerate(cdc, OpWeightWithdrawReimbursement, &weightMsgWithdrawReimbursement, nil,
+		func(_ *rand.Rand) {
+			weightMsgWithdrawReimbursement = DefaultWeightMsgWithdrawReimbursement
+		})
 
 	return simulation.WeightedOperations{
 		simulation.NewWeightedOperation(weightMsgCreatePool, SimulateMsgCreatePool(k, ak, sk)),
@@ -100,6 +107,7 @@ func WeightedOperations(appParams simulation.AppParams, cdc *codec.Codec, k keep
 		simulation.NewWeightedOperation(weightMsgPurchaseShield, SimulateMsgPurchaseShield(k, ak, sk)),
 		simulation.NewWeightedOperation(weightMsgStakeForShield, SimulateMsgStakeForShield(k, ak, sk)),
 		simulation.NewWeightedOperation(weightMsgUnstakeFromShield, SimulateMsgUnstakeFromShield(k, ak, sk)),
+		simulation.NewWeightedOperation(weightMsgWithdrawReimbursement, SimulateMsgWithdrawReimbursement(k, ak, sk)),
 	}
 }
 
@@ -283,7 +291,7 @@ func SimulateMsgDepositCollateral(k keeper.Keeper, ak types.AccountKeeper, sk ty
 		// collateral coins
 		provider, found := k.GetProvider(ctx, simAccount.Address)
 		if found {
-			available = provider.DelegationBonded.Sub(provider.Collateral.Sub(provider.Withdrawing))
+			available = provider.DelegationBonded.Sub(provider.Collateral)
 		}
 		collateralAmount, err := simulation.RandPositiveInt(r, available)
 		if err != nil {
@@ -598,6 +606,44 @@ func SimulateMsgUnstakeFromShield(k keeper.Keeper, ak types.AccountKeeper, sk ty
 			[]uint64{account.GetAccountNumber()},
 			[]uint64{account.GetSequence()},
 			simAcc.PrivKey,
+		)
+
+		if _, _, err := app.Deliver(tx); err != nil {
+			return simulation.NoOpMsg(types.ModuleName), nil, err
+		}
+		return simulation.NewOperationMsg(msg, true, ""), nil, nil
+	}
+}
+
+// SimulateMsgWithdrawReimbursement generates a MsgWithdrawReimbursement object with randomized fields.
+func SimulateMsgWithdrawReimbursement(k keeper.Keeper, ak types.AccountKeeper, sk types.StakingKeeper) simulation.Operation {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accs []simulation.Account, chainID string,
+	) (simulation.OperationMsg, []simulation.FutureOperation, error) {
+		prPair, found := keeper.RandomMaturedProposalIDReimbursementPair(r, k, ctx)
+		if !found {
+			return simulation.NoOpMsg(types.ModuleName), nil, nil
+		}
+
+		var simAccount simulation.Account
+		for _, simAcc := range accs {
+			if simAcc.Address.Equals(prPair.Reimbursement.Beneficiary) {
+				simAccount = simAcc
+				break
+			}
+		}
+		account := ak.GetAccount(ctx, simAccount.Address)
+
+		msg := types.NewMsgWithdrawReimbursement(prPair.ProposalID, simAccount.Address)
+
+		fees := sdk.Coins{}
+		tx := helpers.GenTx(
+			[]sdk.Msg{msg},
+			fees,
+			helpers.DefaultGenTxGas,
+			chainID,
+			[]uint64{account.GetAccountNumber()},
+			[]uint64{account.GetSequence()},
+			simAccount.PrivKey,
 		)
 
 		if _, _, err := app.Deliver(tx); err != nil {
