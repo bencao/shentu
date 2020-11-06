@@ -46,6 +46,9 @@ func InitGenesis(ctx sdk.Context, k Keeper, data GenesisState) []abci.ValidatorU
 	}
 	k.SetLastUpdateTime(ctx, data.LastUpdateTime)
 	k.SetBlockServiceFees(ctx, types.InitMixedDecCoins())
+	for _, pRPair := range data.ProposalIDReimbursementPairs {
+		k.SetReimbursement(ctx, pRPair.ProposalID, pRPair.Reimbursement)
+	}
 	return []abci.ValidatorUpdate{}
 }
 
@@ -69,11 +72,12 @@ func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
 	withdraws := k.GetAllWithdraws(ctx)
 	lastUpdateTime, _ := k.GetLastUpdateTime(ctx)
 	stakingPurchaseRate := k.GetShieldStakingRate(ctx)
-	globalStakingPool := k.GetGlobalStakeForShieldPool(ctx)
+	globalStakingPool := k.GetGlobalShieldStakingPool(ctx)
 	stakingPurchases := k.GetAllStakeForShields(ctx)
 	originalStaking := k.GetAllOriginalStakings(ctx)
+	reimbursements := k.GetAllProposalIDReimbursementPairs(ctx)
 
 	return types.NewGenesisState(shieldAdmin, nextPoolID, nextPurchaseID, poolParams, claimProposalParams,
 		totalCollateral, totalWithdrawing, totalShield, totalClaimed, serviceFees, remainingServiceFees, pools,
-		providers, purchaseLists, withdraws, lastUpdateTime, stakingPurchaseRate, globalStakingPool, stakingPurchases, originalStaking)
+		providers, purchaseLists, withdraws, lastUpdateTime, stakingPurchaseRate, globalStakingPool, stakingPurchases, originalStaking, reimbursements)
 }
