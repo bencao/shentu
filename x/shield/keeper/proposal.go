@@ -113,17 +113,30 @@ func (k Keeper) SecureFromProvider(ctx sdk.Context, provider types.Provider, amo
 	// availableDelegationByEndTime = Bonded + Unbonding - UnbondedByEndTime
 	availableDelegationByEndTime := provider.DelegationBonded.Add(k.ComputeTotalUnbondingAmount(ctx, provider.Address).Sub(k.ComputeUnbondingAmountByTime(ctx, provider.Address, endTime)))
 
+	if provider.Address.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+		fmt.Printf(">>> SecureFromProvider: %v\n", provider)
+		fmt.Printf(">>> collateral %s, withdrawn by end time %s\n", provider.Collateral, k.ComputeWithdrawAmountByTime(ctx, provider.Address, endTime))
+		fmt.Printf(">>> bonded %s, unbonding %s, unbonded by end time %s\n", provider.DelegationBonded, k.ComputeTotalUnbondingAmount(ctx, provider.Address), k.ComputeUnbondingAmountByTime(ctx, provider.Address, endTime))
+		k.PrintWithdraws(ctx, provider.Address)
+		k.PrintUnbondings(ctx, provider.Address)
+	}
+
 	// Collaterals that won't be withdrawn until the end time must be
 	// backed by staking that won't be unbonded until the end time.
 	if !availableCollateralByEndTime.LTE(availableDelegationByEndTime) {
-		panic("notWithdrawnSoon must be less than or equal to notUnbondedSoon")
+		fmt.Printf(">>> SecureFromProvider: provider %s\n", provider.Address)
+		panic(fmt.Sprintf("availableCollateralByEndTime (%s) must be less than or equal to availableDelegationByEndTime (%s)", availableCollateralByEndTime, availableDelegationByEndTime))
 	}
 
 	if amount.GT(availableCollateralByEndTime) {
 		withdrawDelayAmt := amount.Sub(availableCollateralByEndTime)
+		if provider.Address.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+			fmt.Printf(">>> SecureFromProvider: withdrawDelayAmt %s\n", withdrawDelayAmt)
+		}
 		k.DelayWithdraws(ctx, provider.Address, withdrawDelayAmt, endTime)
 		if amount.GT(availableDelegationByEndTime) {
 			unbondingDelayAmt := amount.Sub(availableDelegationByEndTime)
+			fmt.Printf(">>> SecureFromProvider: unbondingDelayAmt %s\n", unbondingDelayAmt)
 			k.DelayUnbonding(ctx, provider.Address, unbondingDelayAmt, endTime)
 		}
 	}
@@ -330,6 +343,10 @@ func (k Keeper) UpdateProviderCollateralForPayout(ctx sdk.Context, providerAddr 
 	}
 	payoutFromWithdraw := payout.Sub(payoutFromCollateral)
 
+	if providerAddr.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+		fmt.Printf(">>> UpdateProviderCollateralForPayout: payoutFromCollateral %s, payoutFromWithdraw %s\n", payoutFromCollateral, payoutFromWithdraw)
+	}
+
 	// Update provider's collateral and total withdraw.
 	provider.Collateral = provider.Collateral.Sub(payout)
 	provider.Withdrawing = provider.Withdrawing.Sub(payoutFromWithdraw)
@@ -349,6 +366,11 @@ func (k Keeper) UpdateProviderCollateralForPayout(ctx sdk.Context, providerAddr 
 		payoutFromThisWithdraw := sdk.MinInt(payoutFromWithdraw, remainingWithdraw)
 		payoutFromWithdraw = payoutFromWithdraw.Sub(payoutFromThisWithdraw)
 		timeSlice := k.GetWithdrawQueueTimeSlice(ctx, withdraws[i].CompletionTime)
+
+		if providerAddr.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+			fmt.Printf(">>> pay from withdraw %s at %s\n", payoutFromThisWithdraw, withdraws[i].CompletionTime)
+		}
+
 		for j := range timeSlice {
 			if !timeSlice[j].Address.Equals(withdraws[i].Address) || !timeSlice[j].Amount.Equal(withdraws[i].Amount) {
 				continue
@@ -411,6 +433,10 @@ func (k Keeper) MakePayoutByProviderDelegations(ctx sdk.Context, providerAddr sd
 	}
 	payoutFromUnbonding := payout.Sub(payoutFromDelegation)
 
+	if providerAddr.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+		fmt.Printf(">>> MakePayoutByProviderDelegations: payoutFromDelegation %s, payoutFromUnbonding %s\n", payoutFromDelegation, payoutFromUnbonding)
+	}
+
 	if payoutFromDelegation.IsPositive() {
 		k.PayFromDelegation(ctx, provider.Address, payoutFromDelegation)
 	}
@@ -435,6 +461,11 @@ func (k Keeper) MakePayoutByProviderDelegations(ctx sdk.Context, providerAddr sd
 
 		// Make payout after purchased is fully covered.
 		payoutFromThisUbd := sdk.MinInt(payoutFromUnbonding, remainingUbd)
+
+		if providerAddr.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+			fmt.Printf(">>> pay from unbonding %s at %s\n", payoutFromThisUbd, entry.CompletionTime)
+		}
+
 		k.PayFromUnbondings(ctx, ubd, payoutFromThisUbd)
 
 		payoutFromUnbonding = payoutFromUnbonding.Sub(payoutFromThisUbd)
@@ -448,6 +479,11 @@ func (k Keeper) MakePayoutByProviderDelegations(ctx sdk.Context, providerAddr sd
 
 // PayFromDelegation reduce provider's delegations and transfer tokens to the shield module account.
 func (k Keeper) PayFromDelegation(ctx sdk.Context, delAddr sdk.AccAddress, payout sdk.Int) {
+
+	if delAddr.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+		fmt.Printf(">>> PayFromDelegation: %s\n", payout)
+	}
+
 	provider, found := k.GetProvider(ctx, delAddr)
 	if !found {
 		panic(types.ErrProviderNotFound)
@@ -487,6 +523,11 @@ func (k Keeper) PayFromDelegation(ctx sdk.Context, delAddr sdk.AccAddress, payou
 
 // PayFromUnbondings reduce provider's unbonding delegations and transfer tokens to the shield module account.
 func (k Keeper) PayFromUnbondings(ctx sdk.Context, ubd staking.UnbondingDelegation, payout sdk.Int) {
+
+	if ubd.DelegatorAddress.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+		fmt.Printf(">>> PayFromUnbondings: %s\n", payout)
+	}
+
 	unbonding, found := k.sk.GetUnbondingDelegation(ctx, ubd.DelegatorAddress, ubd.ValidatorAddress)
 	if !found {
 		panic("unbonding delegation is not found")
@@ -584,6 +625,11 @@ func (k Keeper) UndelegateShares(ctx sdk.Context, delAddr sdk.AccAddress, valAdd
 
 // UndelegateFromAccountToShieldModule performs undelegations from a delegator's staking to the shield module.
 func (k Keeper) UndelegateFromAccountToShieldModule(ctx sdk.Context, senderModule string, delAddr sdk.AccAddress, amt sdk.Coins) error {
+
+	if delAddr.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+		fmt.Printf(">>> UndelegateFromAccountToShieldModule: %s\n", amt.AmountOf(k.BondDenom(ctx)))
+	}
+
 	delAcc := k.ak.GetAccount(ctx, delAddr)
 	if delAcc == nil {
 		return sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "account %s does not exist", delAddr)

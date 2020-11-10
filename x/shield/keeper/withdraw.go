@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -152,6 +153,20 @@ func (k Keeper) ComputeWithdrawAmountByTime(ctx sdk.Context, provider sdk.AccAdd
 		}
 	}
 	return amount
+}
+
+func (k Keeper) PrintWithdraws(ctx sdk.Context, provider sdk.AccAddress) {
+	withdraws := k.GetWithdrawsByProvider(ctx, provider)
+	for _, w := range withdraws {
+		fmt.Printf(">>> withdraw %v\n", w)
+	}
+}
+
+func (k Keeper) PrintUnbondings(ctx sdk.Context, provider sdk.AccAddress) {
+	ubds := k.GetSortedUnbondingDelegations(ctx, provider)
+	for _, ubd := range ubds {
+		fmt.Printf(">>> ubd %v\n", ubd.Entries)
+	}
 }
 
 func (k Keeper) ComputeTotalUnbondingAmount(ctx sdk.Context, provider sdk.AccAddress) sdk.Int {

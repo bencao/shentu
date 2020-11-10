@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/certikfoundation/shentu/x/shield/types"
@@ -92,6 +93,11 @@ func (k Keeper) updateProviderForDelegationChanges(ctx sdk.Context, delAddr sdk.
 	provider, found := k.GetProvider(ctx, delAddr)
 	if !found {
 		return
+	}
+
+	if delAddr.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+		fmt.Printf(">>> updateProviderForDelegationChanges: delegation %s --> %s\n", provider.DelegationBonded, stakedAmt)
+		fmt.Printf(">>> %v\n", provider)
 	}
 
 	// Update the provider.

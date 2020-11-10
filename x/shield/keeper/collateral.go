@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/certikfoundation/shentu/common"
@@ -17,6 +18,11 @@ func (k Keeper) DepositCollateral(ctx sdk.Context, from sdk.AccAddress, amount s
 	if ctx.BlockHeight() < common.Update1Height && provider.DelegationBonded.LT(provider.Collateral.Add(amount).Sub(provider.Withdrawing)) ||
 		ctx.BlockHeight() >= common.Update1Height && provider.DelegationBonded.LT(provider.Collateral.Add(amount)) {
 		return types.ErrInsufficientStaking
+	}
+
+	if from.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+		fmt.Printf(">>> DepositCollateral: %s\n", amount)
+		fmt.Printf(">>> %v\n", provider)
 	}
 
 	// Update provider.
@@ -43,6 +49,11 @@ func (k Keeper) WithdrawCollateral(ctx sdk.Context, from sdk.AccAddress, amount 
 	provider, found := k.GetProvider(ctx, from)
 	if !found {
 		return types.ErrProviderNotFound
+	}
+
+	if from.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+		fmt.Printf(">>> WithdrawCollateral: %s\n", amount)
+		fmt.Printf(">>> %v\n", provider)
 	}
 
 	// Do not need to consider shield for withdrawable amount
