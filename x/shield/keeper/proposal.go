@@ -555,6 +555,7 @@ func (k Keeper) PayFromUnbondings(ctx sdk.Context, ubd staking.UnbondingDelegati
 			}
 			unbonding.RemoveEntry(int64(i))
 		} else {
+			unbonding.Entries[i].InitialBalance = unbonding.Entries[i].InitialBalance.Sub(payout)
 			unbonding.Entries[i].Balance = unbonding.Entries[i].Balance.Sub(payout)
 		}
 		if len(unbonding.Entries) == 0 {

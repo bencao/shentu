@@ -1,6 +1,7 @@
 package shield
 
 import (
+	"fmt"
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -26,4 +27,6 @@ func EndBlocker(ctx sdk.Context, k Keeper) {
 
 	// Close pools who do not have any shield and shield limits are set to zero.
 	k.ClosePools(ctx)
+
+	fmt.Printf(">>> NOW: %s\n", ctx.BlockTime())
 }

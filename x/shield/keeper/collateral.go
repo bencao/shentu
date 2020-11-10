@@ -51,11 +51,6 @@ func (k Keeper) WithdrawCollateral(ctx sdk.Context, from sdk.AccAddress, amount 
 		return types.ErrProviderNotFound
 	}
 
-	if from.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
-		fmt.Printf(">>> WithdrawCollateral: %s\n", amount)
-		fmt.Printf(">>> %v\n", provider)
-	}
-
 	// Do not need to consider shield for withdrawable amount
 	// because the withdraw period is the same as the shield protection period.
 	withdrawable := provider.Collateral.Sub(provider.Withdrawing)
@@ -68,6 +63,11 @@ func (k Keeper) WithdrawCollateral(ctx sdk.Context, from sdk.AccAddress, amount 
 	completionTime := ctx.BlockHeader().Time.Add(poolParams.WithdrawPeriod)
 	withdraw := types.NewWithdraw(from, amount, completionTime)
 	k.InsertWithdrawQueue(ctx, withdraw)
+
+	if from.String() == "cosmos1v0ax762zpn7z27nyzehvug2nwexyugdyq08w7j" {
+		fmt.Printf(">>> WithdrawCollateral: %s, completed at %s\n", amount, completionTime)
+		fmt.Printf(">>> %v\n", provider)
+	}
 
 	// Update provider's withdrawing.
 	provider.Withdrawing = provider.Withdrawing.Add(amount)
