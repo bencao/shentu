@@ -11,10 +11,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/supply"
 )
 
+
 func Setup(isCheckTx bool) *SimApp {
 	db := dbm.NewMemDB()
 	app := NewSimApp(tmlog.NewNopLogger(), db, nil, true, map[int64]bool{}, 0)
-
+	
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := ModuleBasics.DefaultGenesis()
